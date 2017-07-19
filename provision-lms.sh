@@ -6,13 +6,9 @@ set -x
 ./load-db.sh edxapp
 ./load-db.sh edxapp_csmh
 
-# Bring LMS online
+# Bring edxapp containers online
 docker-compose $DOCKER_COMPOSE_FILES up -d lms
-
-docker-compose exec lms bash -c 'source /edx/app/edxapp/edxapp_env && cd /edx/app/edxapp/edx-platform && NO_PYTHON_UNINSTALL=1 paver install_prereqs'
-
-#Installing prereqs crashes the process
-docker-compose restart lms
+docker-compose $DOCKER_COMPOSE_FILES up -d studio
 
 # Run edxapp migrations first since they are needed for the service users and OAuth clients
 docker-compose exec lms bash -c 'source /edx/app/edxapp/edxapp_env && cd /edx/app/edxapp/edx-platform && NO_PREREQ_INSTALL=1 paver update_db --settings devstack_docker'
@@ -30,4 +26,6 @@ docker-compose exec lms bash -c 'source /edx/app/edxapp/edxapp_env && python /ed
 # Create demo course and users
 docker-compose exec lms bash -c '/edx/app/edx_ansible/venvs/edx_ansible/bin/ansible-playbook /edx/app/edx_ansible/edx_ansible/playbooks/edx-east/demo.yml -v -c local -i "127.0.0.1," --extra-vars="COMMON_EDXAPP_SETTINGS=devstack_docker"'
 
+# Create static assets for both LMS and Studio
 docker-compose exec lms bash -c 'source /edx/app/edxapp/edxapp_env && cd /edx/app/edxapp/edx-platform && paver update_assets --settings devstack_docker'
+docker-compose exec studio bash -c 'source /edx/app/edxapp/edxapp_env && cd /edx/app/edxapp/edx-platform && paver update_assets --settings devstack_docker'
